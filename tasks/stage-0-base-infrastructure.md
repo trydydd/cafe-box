@@ -8,7 +8,7 @@ one hour of work for an intermediate software engineer.
 
 ---
 
-## Task 0.01 — Repository Scaffolding
+## Task 0.01 — Repository Scaffolding ✅
 
 Create all top-level directories and placeholder files described in the repository
 structure diagram in `PLAN.md`. This gives every subsequent task a concrete place
@@ -27,9 +27,11 @@ to land.
 
 **Acceptance criteria:** `tree -L 3` matches the layout in `PLAN.md`.
 
+**Status: Complete**
+
 ---
 
-## Task 0.02 — `cafe.yaml` Sample Configuration
+## Task 0.02 — `cafe.yaml` Sample Configuration ✅
 
 Write a fully-commented sample `cafe.yaml` that covers every field referenced in
 the plan: box identity (`box.domain`, `box.name`), WiFi hotspot settings, storage
@@ -41,6 +43,8 @@ paths, and per-service enable flags.
 **Acceptance criteria:**
 - All keys referenced elsewhere in the codebase load without KeyError.
 - File is valid YAML (`python -c "import yaml; yaml.safe_load(open('cafe.yaml'))"`).
+
+**Status: Complete**
 
 ---
 

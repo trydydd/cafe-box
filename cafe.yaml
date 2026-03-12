@@ -1,0 +1,77 @@
+# cafe.yaml — CafeBox operator configuration
+# This is the only file you need to edit to customise your CafeBox.
+# All system configs (nginx, hostapd, dnsmasq, etc.) are auto-generated from here.
+
+# ---------------------------------------------------------------------------
+# Box identity
+# ---------------------------------------------------------------------------
+box:
+  # Human-readable name shown on the landing portal and in admin UI
+  name: "CafeBox"
+
+  # Domain used for all local services (resolved inside the hotspot only)
+  domain: "cafe.box"
+
+  # IP address assigned to the box's AP interface
+  ip: "10.0.0.1"
+
+# ---------------------------------------------------------------------------
+# WiFi hotspot (hostapd + dnsmasq)
+# ---------------------------------------------------------------------------
+wifi:
+  # SSID broadcast by the hotspot
+  ssid: "CafeBox"
+
+  # WPA2 passphrase — set to an empty string for an open network
+  passphrase: ""
+
+  # Wireless interface used for the access point
+  interface: "wlan0"
+
+  # 802.11 channel (1–11 for 2.4 GHz; leave at 6 for best compatibility)
+  channel: 6
+
+  # DHCP range handed to connected clients (start, end, lease time)
+  dhcp_range_start: "10.0.0.10"
+  dhcp_range_end: "10.0.0.200"
+  dhcp_lease: "12h"
+
+# ---------------------------------------------------------------------------
+# Storage paths
+# Each service stores its writable data under a single top-level mount point
+# so the whole data directory is easy to back up or migrate.
+# ---------------------------------------------------------------------------
+storage:
+  # Top-level base directory (symlink target root)
+  base: "/srv/cafebox"
+
+  locations:
+    conduit:      "/srv/cafebox/conduit"
+    calibre_web:  "/srv/cafebox/calibre"
+    kiwix:        "/srv/cafebox/kiwix"
+    navidrome:    "/srv/cafebox/navidrome"
+
+# ---------------------------------------------------------------------------
+# Services — per-service enable flags
+# Set a service to false to prevent it from being installed/started.
+# ---------------------------------------------------------------------------
+services:
+  # Matrix homeserver (Conduit)
+  conduit:
+    enabled: true
+
+  # Matrix web client (Element Web) — requires conduit
+  element_web:
+    enabled: true
+
+  # eBook library (Calibre-Web)
+  calibre_web:
+    enabled: true
+
+  # Offline Wikipedia / ZIM reader (Kiwix)
+  kiwix:
+    enabled: true
+
+  # Music streaming server (Navidrome)
+  navidrome:
+    enabled: true
