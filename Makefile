@@ -5,13 +5,17 @@
 #   scripts/config.py + scripts/generate-configs.py — for generate-configs
 #   install.sh      — for the install target
 
-.PHONY: help vm-start vm-stop vm-ssh install logs generate-configs test
+# Default disk path — overridable via environment or make variable: VM_DISK=path/to/disk.qcow2
+VM_DISK ?= vm/cafebox-dev.qcow2
+
+.PHONY: help vm-build vm-start vm-stop vm-ssh install logs generate-configs test
 
 # Default target: print help
 help:
 	@echo "CafeBox developer shortcuts"
 	@echo ""
-	@echo "  make vm-start         Start the development VM (QEMU/libvirt)"
+	@echo "  make vm-build         Download RPi OS Lite 64-bit and create vm/cafebox-dev.qcow2"
+	@echo "  make vm-start         Start the development VM (builds disk first if missing)"
 	@echo "  make vm-stop          Stop the development VM"
 	@echo "  make vm-ssh           Open an SSH session into the development VM"
 	@echo "  make install          Run install.sh inside the VM (or locally)"
@@ -19,9 +23,14 @@ help:
 	@echo "  make generate-configs Render all Jinja2 templates from cafe.yaml"
 	@echo "  make test             Run the test suite (tests/)"
 
+vm-build:
+	@test -f scripts/build-vm-disk.sh || { echo "ERROR: scripts/build-vm-disk.sh not found."; exit 1; }
+	VM_DISK="$(VM_DISK)" bash scripts/build-vm-disk.sh
+
 vm-start:
 	@test -f scripts/vm.sh || { echo "ERROR: scripts/vm.sh not found."; exit 1; }
-	bash scripts/vm.sh start
+	@test -f "$(VM_DISK)" || $(MAKE) vm-build VM_DISK="$(VM_DISK)"
+	VM_DISK="$(VM_DISK)" bash scripts/vm.sh start
 
 vm-stop:
 	@test -f scripts/vm.sh || { echo "ERROR: scripts/vm.sh not found."; exit 1; }

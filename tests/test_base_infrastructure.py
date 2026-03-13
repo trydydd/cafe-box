@@ -173,6 +173,7 @@ class TestMakefileTargets(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 0, msg=result.stderr)
         for target in [
+            "vm-build",
             "vm-start",
             "vm-stop",
             "vm-ssh",

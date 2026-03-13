@@ -1,6 +1,11 @@
 # Auto-generated configs — never edit directly; regenerate with make generate-configs
 system/generated/
 
+# VM disk images — large binary files, built locally with make vm-build
+vm/*.qcow2
+vm/*.img
+vm/*.img.xz
+
 # Python
 __pycache__/
 *.py[cod]

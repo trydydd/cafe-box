@@ -46,6 +46,7 @@ cmd_start() {
     fi
     if [ ! -f "$VM_DISK" ]; then
         echo "ERROR: VM disk image not found: $VM_DISK" >&2
+        echo "       Run 'make vm-build' to download and create it." >&2
         exit 1
     fi
     echo "Starting development VM (disk=$VM_DISK, ssh-port=$VM_SSH_PORT)…"
