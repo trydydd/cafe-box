@@ -5,7 +5,7 @@
 #   scripts/config.py + scripts/generate-configs.py — for generate-configs
 #   install.sh      — for the install target
 
-.PHONY: help vm-start vm-stop vm-ssh install logs generate-configs
+.PHONY: help vm-start vm-stop vm-ssh install logs generate-configs test
 
 # Default target: print help
 help:
@@ -17,6 +17,7 @@ help:
 	@echo "  make install          Run install.sh inside the VM (or locally)"
 	@echo "  make logs             Tail journald logs for all cafebox services"
 	@echo "  make generate-configs Render all Jinja2 templates from cafe.yaml"
+	@echo "  make test             Run the test suite (tests/)"
 
 vm-start:
 	@test -f scripts/vm.sh || { echo "ERROR: scripts/vm.sh not found."; exit 1; }
@@ -41,3 +42,6 @@ logs:
 generate-configs:
 	@test -f scripts/generate-configs.py || { echo "ERROR: scripts/generate-configs.py not found."; exit 1; }
 	python scripts/generate-configs.py
+
+test:
+	python -m pytest tests/ -v

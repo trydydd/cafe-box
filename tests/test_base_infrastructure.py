@@ -184,16 +184,76 @@ class TestTask005MakefileTargets(unittest.TestCase):
                 self.assertIn(target, result.stdout)
 
     def test_vm_target_fails_with_descriptive_message_when_vm_script_missing(self):
+        import shutil
+        with tempfile.TemporaryDirectory() as tmp:
+            # Copy only the Makefile so that scripts/vm.sh is absent
+            shutil.copy(REPO_ROOT / "Makefile", tmp)
+            result = subprocess.run(
+                ["make", "vm-start"],
+                cwd=tmp,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            combined = f"{result.stdout}\n{result.stderr}"
+            self.assertIn("scripts/vm.sh not found", combined)
+
+
+class TestTask006VMScript(unittest.TestCase):
+    VM_SCRIPT = REPO_ROOT / "scripts" / "vm.sh"
+
+    def test_vm_script_exists(self):
+        self.assertTrue(self.VM_SCRIPT.is_file(), "scripts/vm.sh must exist")
+
+    def test_vm_script_syntax(self):
         result = subprocess.run(
-            ["make", "vm-start"],
-            cwd=REPO_ROOT,
+            ["bash", "-n", str(self.VM_SCRIPT)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+
+    def test_status_exits_zero_and_prints_stopped_when_no_vm_running(self):
+        result = subprocess.run(
+            ["bash", str(self.VM_SCRIPT), "status"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        self.assertIn("stopped", result.stdout)
+
+    def test_unknown_subcommand_exits_nonzero(self):
+        result = subprocess.run(
+            ["bash", str(self.VM_SCRIPT), "bogus-command"],
             capture_output=True,
             text=True,
             check=False,
         )
         self.assertNotEqual(result.returncode, 0)
+
+    def test_vm_disk_and_ssh_port_configurable_via_env(self):
+        """start sub-command should honour VM_DISK / VM_SSH_PORT env vars."""
+        env_vars = {
+            "VM_DISK": "/nonexistent/custom.qcow2",
+            "VM_SSH_PORT": "9999",
+        }
+        import os
+        env = {**os.environ, **env_vars}
+        result = subprocess.run(
+            ["bash", str(self.VM_SCRIPT), "start"],
+            capture_output=True,
+            text=True,
+            env=env,
+            check=False,
+        )
+        # Should fail because the disk image doesn't exist, but the error
+        # message must mention the custom path, proving the env var was read.
         combined = f"{result.stdout}\n{result.stderr}"
-        self.assertIn("scripts/vm.sh not found", combined)
+        self.assertIn("/nonexistent/custom.qcow2", combined)
+        self.assertNotEqual(result.returncode, 0)
 
 
 if __name__ == "__main__":
