@@ -8,7 +8,7 @@
 # Default disk path — overridable via environment or make variable: VM_DISK=path/to/disk.qcow2
 VM_DISK ?= vm/cafebox-dev.qcow2
 
-.PHONY: help vm-build vm-start vm-stop vm-ssh install logs generate-configs test
+.PHONY: help vm-build vm-start vm-stop vm-ssh vm-delete install logs generate-configs test
 
 # Default target: print help
 help:
@@ -18,6 +18,7 @@ help:
 	@echo "  make vm-start         Start the development VM (builds disk first if missing)"
 	@echo "  make vm-stop          Stop the development VM"
 	@echo "  make vm-ssh           Open an SSH session into the development VM"
+	@echo "  make vm-delete        Stop the VM (if running) and delete the disk image"
 	@echo "  make install          Run install.sh inside the VM (or locally)"
 	@echo "  make logs             Tail journald logs for all cafebox services"
 	@echo "  make generate-configs Render all Jinja2 templates from cafe.yaml"
@@ -35,6 +36,10 @@ vm-start:
 vm-stop:
 	@test -f scripts/vm.sh || { echo "ERROR: scripts/vm.sh not found."; exit 1; }
 	bash scripts/vm.sh stop
+
+vm-delete:
+	@test -f scripts/vm.sh || { echo "ERROR: scripts/vm.sh not found."; exit 1; }
+	VM_DISK="$(VM_DISK)" bash scripts/vm.sh delete
 
 vm-ssh:
 	@test -f scripts/vm.sh || { echo "ERROR: scripts/vm.sh not found."; exit 1; }

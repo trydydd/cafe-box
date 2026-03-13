@@ -177,6 +177,7 @@ class TestMakefileTargets(unittest.TestCase):
             "vm-start",
             "vm-stop",
             "vm-ssh",
+            "vm-delete",
             "install",
             "logs",
             "generate-configs",
@@ -265,6 +266,38 @@ class TestVMScript(unittest.TestCase):
         combined = f"{result.stdout}\n{result.stderr}"
         self.assertIn("/nonexistent/custom.qcow2", combined)
         self.assertNotEqual(result.returncode, 0)
+
+    def test_delete_removes_disk_image(self):
+        """delete sub-command should remove an existing disk image."""
+        import os
+        with tempfile.TemporaryDirectory() as tmp:
+            disk = Path(tmp) / "cafebox-dev.qcow2"
+            disk.write_bytes(b"fake-qcow2-data")
+            env = {**os.environ, "VM_DISK": str(disk)}
+            result = subprocess.run(
+                ["bash", str(self.VM_SCRIPT), "delete"],
+                capture_output=True,
+                text=True,
+                env=env,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, msg=result.stderr)
+            self.assertFalse(disk.exists(), "Disk image should have been deleted")
+            self.assertIn("Deleted", result.stdout)
+
+    def test_delete_when_no_disk_prints_info_and_exits_zero(self):
+        """delete sub-command should exit 0 with an INFO message when no disk exists."""
+        import os
+        env = {**os.environ, "VM_DISK": "/nonexistent/no-disk.qcow2"}
+        result = subprocess.run(
+            ["bash", str(self.VM_SCRIPT), "delete"],
+            capture_output=True,
+            text=True,
+            env=env,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        self.assertIn("INFO", result.stdout)
 
 
 class TestBuildVMDiskScript(unittest.TestCase):

@@ -7,6 +7,7 @@
 #   ssh          Open an interactive SSH session into the VM
 #   mount-share  Mount the repository into the VM via 9p/virtfs
 #   status       Print "running" or "stopped" and exit 0
+#   delete       Stop the VM (if running) and remove the disk image
 #
 # Configurable environment variables (with defaults):
 #   VM_DISK      Path to the VM disk image  (default: vm/cafebox-dev.qcow2)
@@ -119,8 +120,22 @@ cmd_mount_share() {
          echo 'Mounted at /mnt/cafebox'"
 }
 
+cmd_delete() {
+    if _vm_is_running; then
+        echo "VM is running — stopping it before deleting the disk…"
+        cmd_stop
+    fi
+    if [ ! -f "$VM_DISK" ]; then
+        echo "INFO: VM disk image not found (nothing to delete): $VM_DISK"
+        return 0
+    fi
+    rm -f "$VM_DISK"
+    echo "Deleted VM disk image: $VM_DISK"
+    echo "Run 'make vm-build' (or 'make vm-start') to create a fresh image."
+}
+
 usage() {
-    echo "Usage: $0 {start|stop|ssh|mount-share|status}" >&2
+    echo "Usage: $0 {start|stop|ssh|mount-share|status|delete}" >&2
     exit 1
 }
 
@@ -130,5 +145,6 @@ case "${1:-}" in
     ssh)         shift; cmd_ssh "$@" ;;
     mount-share) cmd_mount_share ;;
     status)      cmd_status ;;
+    delete)      cmd_delete ;;
     *)           usage ;;
 esac
