@@ -27,10 +27,16 @@ fi
 VM_DIR="$(dirname "$VM_DISK")"
 mkdir -p "$VM_DIR"
 
-# Verify required tools are present
+# Verify required tools are present, with install hints
+declare -A TOOL_HINTS=(
+    [curl]="sudo apt install curl"
+    [xz]="sudo apt install xz-utils"
+    [qemu-img]="sudo apt install qemu-utils"
+)
 for tool in curl xz qemu-img; do
     if ! command -v "$tool" &>/dev/null; then
         echo "ERROR: Required tool not found: $tool" >&2
+        echo "       Install it with: ${TOOL_HINTS[$tool]}" >&2
         exit 1
     fi
 done

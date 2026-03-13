@@ -237,19 +237,29 @@ class TestVMScript(unittest.TestCase):
 
     def test_vm_disk_and_ssh_port_configurable_via_env(self):
         """start sub-command should honour VM_DISK / VM_SSH_PORT env vars."""
-        env_vars = {
-            "VM_DISK": "/nonexistent/custom.qcow2",
-            "VM_SSH_PORT": "9999",
-        }
         import os
-        env = {**os.environ, **env_vars}
-        result = subprocess.run(
-            ["bash", str(self.VM_SCRIPT), "start"],
-            capture_output=True,
-            text=True,
-            env=env,
-            check=False,
-        )
+        import tempfile
+
+        # Stub qemu-system-aarch64 so the prerequisite check passes and the
+        # script reaches the disk-existence check (which is what we're testing).
+        with tempfile.TemporaryDirectory() as stub_bin:
+            stub = Path(stub_bin) / "qemu-system-aarch64"
+            stub.write_text("#!/bin/sh\nexit 1\n")
+            stub.chmod(0o755)
+
+            env_vars = {
+                "VM_DISK": "/nonexistent/custom.qcow2",
+                "VM_SSH_PORT": "9999",
+                "PATH": f"{stub_bin}:{os.environ.get('PATH', '')}",
+            }
+            env = {**os.environ, **env_vars}
+            result = subprocess.run(
+                ["bash", str(self.VM_SCRIPT), "start"],
+                capture_output=True,
+                text=True,
+                env=env,
+                check=False,
+            )
         # Should fail because the disk image doesn't exist, but the error
         # message must mention the custom path, proving the env var was read.
         combined = f"{result.stdout}\n{result.stderr}"

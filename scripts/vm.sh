@@ -19,6 +19,17 @@ VM_SSH_PORT="${VM_SSH_PORT:-2222}"
 VM_PID_FILE="/tmp/cafebox-vm.pid"
 VM_NAME="cafebox-dev"
 
+# Print an error and exit if a required command is not installed.
+# The second argument is a human-readable install hint.
+_require_cmd() {
+    local cmd="$1" hint="$2"
+    if ! command -v "$cmd" &>/dev/null; then
+        echo "ERROR: Required command not found: $cmd" >&2
+        echo "       $hint" >&2
+        exit 1
+    fi
+}
+
 _vm_is_running() {
     if [ -f "$VM_PID_FILE" ]; then
         local pid
@@ -40,6 +51,8 @@ cmd_status() {
 }
 
 cmd_start() {
+    _require_cmd qemu-system-aarch64 \
+        "Install QEMU ARM emulation (provides qemu-system-aarch64): sudo apt install qemu-system-arm qemu-efi-aarch64"
     if _vm_is_running; then
         echo "INFO: VM is already running."
         return 0
