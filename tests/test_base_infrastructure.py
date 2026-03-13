@@ -419,7 +419,7 @@ class TestBuildVMDiskScript(unittest.TestCase):
             ".gitignore should exclude the RPi OS image cache directory",
         )
 
-    def test_build_script_resizes_image_to_12g(self):
+    def test_build_script_resizes_image_to_16g(self):
         content = self.BUILD_SCRIPT.read_text()
         self.assertIn(
             "qemu-img resize",
@@ -427,9 +427,9 @@ class TestBuildVMDiskScript(unittest.TestCase):
             "build-vm-disk.sh should resize the qcow2 image with qemu-img resize",
         )
         self.assertIn(
-            "12G",
+            "16G",
             content,
-            "build-vm-disk.sh should resize the image to 12G",
+            "build-vm-disk.sh should resize the image to 16G (power-of-2 required by QEMU SD card emulation)",
         )
 
 
