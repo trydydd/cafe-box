@@ -117,6 +117,9 @@ fi
 echo "==> Converting to qcow2: $VM_DISK"
 qemu-img convert -f raw -O qcow2 "$IMG_FILE" "$VM_DISK"
 
+echo "==> Expanding image to 12G..."
+qemu-img resize "$VM_DISK" 12G
+
 echo ""
-echo "VM disk image ready: $VM_DISK"
+echo "VM disk image ready: $VM_DISK (12G)"
 echo "Run 'make vm-start' to boot the VM."

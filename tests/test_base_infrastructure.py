@@ -419,6 +419,19 @@ class TestBuildVMDiskScript(unittest.TestCase):
             ".gitignore should exclude the RPi OS image cache directory",
         )
 
+    def test_build_script_resizes_image_to_12g(self):
+        content = self.BUILD_SCRIPT.read_text()
+        self.assertIn(
+            "qemu-img resize",
+            content,
+            "build-vm-disk.sh should resize the qcow2 image with qemu-img resize",
+        )
+        self.assertIn(
+            "12G",
+            content,
+            "build-vm-disk.sh should resize the image to 12G",
+        )
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
