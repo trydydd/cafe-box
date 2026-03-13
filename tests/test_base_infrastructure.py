@@ -370,6 +370,36 @@ class TestVMScript(unittest.TestCase):
             "vm.sh _wait_for_ssh should use ssh-keyscan to detect a live sshd",
         )
 
+    def test_vm_start_defines_log_file_variable(self):
+        """vm.sh must declare a VM_LOG_FILE variable with a default path."""
+        content = self.VM_SCRIPT.read_text()
+        self.assertIn(
+            "VM_LOG_FILE",
+            content,
+            "vm.sh should define a VM_LOG_FILE variable",
+        )
+
+    def test_vm_start_passes_serial_log_to_qemu(self):
+        """vm.sh must pass -serial file:<VM_LOG_FILE> to qemu so console
+        output is captured in the log file."""
+        content = self.VM_SCRIPT.read_text()
+        self.assertRegex(
+            content,
+            r'-serial\s+"?file:.*VM_LOG_FILE',
+            "vm.sh should pass -serial file:${VM_LOG_FILE} to qemu-system-aarch64",
+        )
+
+    def test_vm_start_prints_log_file_path(self):
+        """cmd_start must print the log file path so the user knows where to
+        look for serial console output."""
+        content = self.VM_SCRIPT.read_text()
+        # Confirm the log line references it in a user-visible echo statement.
+        self.assertRegex(
+            content,
+            r'echo.*VM_LOG_FILE',
+            "vm.sh should echo the VM_LOG_FILE path in cmd_start",
+        )
+
 
 class TestBuildVMDiskScript(unittest.TestCase):
     BUILD_SCRIPT = REPO_ROOT / "scripts" / "build-vm-disk.sh"

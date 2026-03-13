@@ -18,6 +18,7 @@ set -euo pipefail
 VM_DISK="${VM_DISK:-vm/cafebox-dev.qcow2}"
 VM_SSH_PORT="${VM_SSH_PORT:-2222}"
 VM_PID_FILE="/tmp/cafebox-vm.pid"
+VM_LOG_FILE="${VM_LOG_FILE:-/tmp/cafebox-vm.log}"
 VM_NAME="cafebox-dev"
 
 # Print an error and exit if a required command is not installed.
@@ -132,9 +133,11 @@ cmd_start() {
         -drive "file=$VM_DISK,format=qcow2,if=sd" \
         -netdev "user,id=net0,hostfwd=tcp::${VM_SSH_PORT}-:22" \
         -device usb-net,netdev=net0 \
+        -serial "file:${VM_LOG_FILE}" \
         -daemonize \
         -pidfile "$VM_PID_FILE"
     echo "VM started. Use 'make vm-ssh' to connect (first boot may take a few minutes)."
+    echo "  Serial console log: $VM_LOG_FILE"
 }
 
 cmd_stop() {
