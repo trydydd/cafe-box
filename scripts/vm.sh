@@ -71,7 +71,7 @@ cmd_start() {
         -machine "$VM_MACHINE" \
         -cpu "$VM_CPU" \
         -m 1024 \
-        -nographic \
+        -display none \
         -drive "file=$VM_DISK,format=qcow2" \
         -netdev "user,id=net0,hostfwd=tcp::${VM_SSH_PORT}-:22" \
         -device virtio-net-pci,netdev=net0 \
