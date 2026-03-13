@@ -1,0 +1,62 @@
+# nginx.conf.j2 — CafeBox nginx configuration template
+#
+# Rendered by:  scripts/generate-configs.py
+# Output:       system/generated/nginx.conf
+#
+# Expected rendered form (with the sample cafe.yaml defaults):
+#
+#   server {
+#       listen 80 default_server;
+#       server_name cafe.box;
+#       root /var/www/cafebox/portal;
+#       index index.html;
+#
+#       # Captive-portal detection — redirect to portal on all OSes
+#       location /generate_204 { return 302 http://cafe.box/; }
+#       location /hotspot-detect.html { return 302 http://cafe.box/; }
+#       location /connecttest.txt { return 302 http://cafe.box/; }
+#       location /ncsi.txt { return 302 http://cafe.box/; }
+#
+#       location / { try_files $uri $uri/ =404; }
+#
+#       # Service reverse-proxy stubs (uncomment when service is installed)
+#       # location /conduit/  { proxy_pass http://127.0.0.1:6167/; }
+#       # location /element/  { proxy_pass http://127.0.0.1:8080/; }
+#       # location /calibre/  { proxy_pass http://127.0.0.1:8083/; }
+#       # location /kiwix/    { proxy_pass http://127.0.0.1:8888/; }
+#       # location /navidrome/ { proxy_pass http://127.0.0.1:4533/; }
+#   }
+
+server {
+    listen 80 default_server;
+    server_name {{ box.domain }};
+
+    root /var/www/cafebox/portal;
+    index index.html;
+
+    # Captive-portal detection — redirect all OS probes to the portal
+    location /generate_204       { return 302 http://{{ box.domain }}/; }
+    location /hotspot-detect.html { return 302 http://{{ box.domain }}/; }
+    location /connecttest.txt    { return 302 http://{{ box.domain }}/; }
+    location /ncsi.txt           { return 302 http://{{ box.domain }}/; }
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+
+    # Admin API (proxied to the local admin backend)
+    location /api/ {
+        proxy_pass http://127.0.0.1:8000/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    {% for name, svc in services.items() %}
+    {% if svc.enabled %}
+    # {{ name }} — enabled
+    # location /{{ name }}/ { proxy_pass http://127.0.0.1:PORT/; }
+    {% else %}
+    # {{ name }} — disabled (set services.{{ name }}.enabled: true to activate)
+    {% endif %}
+    {% endfor %}
+}

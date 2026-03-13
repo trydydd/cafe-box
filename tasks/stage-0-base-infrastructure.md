@@ -48,7 +48,7 @@ paths, and per-service enable flags.
 
 ---
 
-## Task 0.03 — `scripts/config.py` — Configuration Loader
+## Task 0.03 — `scripts/config.py` — Configuration Loader ✅
 
 Write a small Python module that loads and validates `cafe.yaml`. It must be
 importable by both `install.sh` (via `python scripts/config.py`) and the admin
@@ -63,9 +63,11 @@ backend.
 - `python scripts/config.py` prints resolved config without errors.
 - Missing required key raises a clear `ConfigError` with the key name.
 
+**Status: Complete**
+
 ---
 
-## Task 0.04 — `scripts/generate-configs.py` — Jinja2 Template Renderer
+## Task 0.04 — `scripts/generate-configs.py` — Jinja2 Template Renderer ✅
 
 Write the script that reads `cafe.yaml` (via `config.py`) and renders every
 Jinja2 template in `system/templates/` into `system/generated/`.
@@ -80,9 +82,11 @@ Jinja2 template in `system/templates/` into `system/generated/`.
 - Re-running is idempotent.
 - Unknown template variables raise a clear error, not a silent empty string.
 
+**Status: Complete**
+
 ---
 
-## Task 0.05 — `Makefile` Dev Shortcuts
+## Task 0.05 — `Makefile` Dev Shortcuts ✅
 
 Add the developer convenience targets described in `PLAN.md`:
 `vm-start`, `vm-stop`, `vm-ssh`, `install`, `logs`, `generate-configs`.
@@ -96,6 +100,8 @@ Add the developer convenience targets described in `PLAN.md`:
   one-line descriptions.
 - Each target fails with a descriptive message if its prerequisite (e.g., `vm.sh`)
   does not exist yet.
+
+**Status: Complete**
 
 ---
 

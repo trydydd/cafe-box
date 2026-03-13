@@ -1,0 +1,18 @@
+# Auto-generated configs — never edit directly; regenerate with make generate-configs
+system/generated/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.eggs/
+*.egg-info/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# OS
+.DS_Store
+Thumbs.db
