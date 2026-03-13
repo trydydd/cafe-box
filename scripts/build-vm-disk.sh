@@ -9,6 +9,8 @@
 #   VM_PASSWORD  Password for the default 'pi' user (default: admin)
 #   RPIOS_URL    Download URL for the image archive
 #                (default: https://downloads.raspberrypi.com/raspios_lite_arm64_latest)
+#   RPIOS_CACHE  Directory used to cache the downloaded .img.xz archive so that
+#                subsequent builds skip the large download  (default: vm/rpios-cache)
 #
 # Prerequisites: curl, xz, qemu-img, mcopy (mtools), openssl
 
@@ -19,14 +21,21 @@ REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 
 VM_DISK="${VM_DISK:-vm/cafebox-dev.qcow2}"
 RPIOS_URL="${RPIOS_URL:-https://downloads.raspberrypi.com/raspios_lite_arm64_latest}"
+RPIOS_CACHE="${RPIOS_CACHE:-vm/rpios-cache}"
 
 # Resolve VM_DISK relative to the repo root when not an absolute path
 if [[ "$VM_DISK" != /* ]]; then
     VM_DISK="$REPO_ROOT/$VM_DISK"
 fi
 
+# Resolve RPIOS_CACHE relative to the repo root when not an absolute path
+if [[ "$RPIOS_CACHE" != /* ]]; then
+    RPIOS_CACHE="$REPO_ROOT/$RPIOS_CACHE"
+fi
+
 VM_DIR="$(dirname "$VM_DISK")"
 mkdir -p "$VM_DIR"
+mkdir -p "$RPIOS_CACHE"
 
 # Verify required tools are present, with install hints
 declare -A TOOL_HINTS=(
@@ -48,9 +57,18 @@ TMP_DIR="$(mktemp -d)"
 cleanup() { rm -rf "$TMP_DIR"; }
 trap cleanup EXIT
 
-echo "==> Downloading Raspberry Pi OS Lite 64-bit..."
-echo "    URL: $RPIOS_URL"
-curl -L --progress-bar -o "$TMP_DIR/rpios.img.xz" "$RPIOS_URL"
+CACHED_ARCHIVE="$RPIOS_CACHE/rpios.img.xz"
+if [[ -f "$CACHED_ARCHIVE" ]]; then
+    echo "==> Using cached Raspberry Pi OS archive: $CACHED_ARCHIVE"
+    echo "    (Delete it to force a fresh download)"
+    cp "$CACHED_ARCHIVE" "$TMP_DIR/rpios.img.xz"
+else
+    echo "==> Downloading Raspberry Pi OS Lite 64-bit..."
+    echo "    URL: $RPIOS_URL"
+    curl -L --progress-bar -o "$TMP_DIR/rpios.img.xz" "$RPIOS_URL"
+    echo "==> Caching archive for future builds: $CACHED_ARCHIVE"
+    cp "$TMP_DIR/rpios.img.xz" "$CACHED_ARCHIVE"
+fi
 
 echo "==> Decompressing image..."
 xz --decompress "$TMP_DIR/rpios.img.xz"

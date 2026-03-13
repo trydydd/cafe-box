@@ -370,6 +370,31 @@ class TestBuildVMDiskScript(unittest.TestCase):
             "build-vm-disk.sh should use openssl passwd to hash the password",
         )
 
+    def test_build_script_caches_image(self):
+        content = self.BUILD_SCRIPT.read_text()
+        # The script must declare a RPIOS_CACHE variable.
+        self.assertIn(
+            "RPIOS_CACHE", content,
+            "build-vm-disk.sh should declare a RPIOS_CACHE variable",
+        )
+        # The script must skip the download when a cached archive is present.
+        self.assertIn(
+            '-f "$CACHED_ARCHIVE"', content,
+            "build-vm-disk.sh should test for the cached archive file before downloading",
+        )
+        # The script must save the downloaded archive to the cache.
+        self.assertIn(
+            "CACHED_ARCHIVE", content,
+            "build-vm-disk.sh should save the downloaded archive to the cache",
+        )
+
+    def test_rpios_cache_dir_is_gitignored(self):
+        gitignore = (REPO_ROOT / ".gitignore").read_text()
+        self.assertIn(
+            "vm/rpios-cache", gitignore,
+            ".gitignore should exclude the RPi OS image cache directory",
+        )
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
