@@ -336,6 +336,21 @@ class TestVMScript(unittest.TestCase):
             "vm.sh should default VM_MACHINE to raspi3b",
         )
 
+    def test_vm_start_uses_virtio_net_device_not_pci(self):
+        """raspi3b has no PCI bus; the network device must be virtio-net-device
+        (virtio-mmio), not virtio-net-pci."""
+        content = self.VM_SCRIPT.read_text()
+        self.assertIn(
+            "virtio-net-device",
+            content,
+            "vm.sh should use virtio-net-device (not virtio-net-pci) for raspi3b",
+        )
+        self.assertNotIn(
+            "virtio-net-pci",
+            content,
+            "vm.sh must not use virtio-net-pci: raspi3b has no PCI bus",
+        )
+
     def test_vm_ssh_waits_for_ssh_readiness(self):
         """vm.sh must call _wait_for_ssh before connecting."""
         content = self.VM_SCRIPT.read_text()

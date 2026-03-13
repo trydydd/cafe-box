@@ -131,7 +131,7 @@ cmd_start() {
         -display none \
         -drive "file=$VM_DISK,format=qcow2,if=sd" \
         -netdev "user,id=net0,hostfwd=tcp::${VM_SSH_PORT}-:22" \
-        -device virtio-net-pci,netdev=net0 \
+        -device virtio-net-device,netdev=net0 \
         -daemonize \
         -pidfile "$VM_PID_FILE"
     echo "VM started. Use 'make vm-ssh' to connect (first boot may take a few minutes)."
