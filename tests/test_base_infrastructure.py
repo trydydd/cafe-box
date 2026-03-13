@@ -26,7 +26,7 @@ generate_module = _load_module(
 )
 
 
-class TestTask001RepositoryScaffolding(unittest.TestCase):
+class TestRepositoryScaffolding(unittest.TestCase):
     def test_required_directories_exist(self):
         expected = [
             "scripts",
@@ -67,7 +67,7 @@ class TestTask001RepositoryScaffolding(unittest.TestCase):
         self.assertTrue(image_readme.strip(), "image/README.md should not be empty")
 
 
-class TestTask002SampleConfig(unittest.TestCase):
+class TestSampleConfig(unittest.TestCase):
     def test_cafe_yaml_is_valid_yaml(self):
         data = yaml.safe_load((REPO_ROOT / "cafe.yaml").read_text())
         self.assertIsInstance(data, dict)
@@ -79,7 +79,7 @@ class TestTask002SampleConfig(unittest.TestCase):
                 self.assertIn(key, data)
 
 
-class TestTask003ConfigLoader(unittest.TestCase):
+class TestConfigLoader(unittest.TestCase):
     def test_load_config_returns_valid_mapping(self):
         config = config_module.load_config(str(REPO_ROOT / "cafe.yaml"))
         self.assertIsInstance(config, dict)
@@ -115,7 +115,7 @@ class TestTask003ConfigLoader(unittest.TestCase):
         self.assertIn("box.domain", str(ctx.exception))
 
 
-class TestTask004TemplateRenderer(unittest.TestCase):
+class TestTemplateRenderer(unittest.TestCase):
     def test_generate_configs_script_renders_nginx(self):
         result = subprocess.run(
             [sys.executable, "scripts/generate-configs.py", "--config", "cafe.yaml"],
@@ -162,7 +162,7 @@ class TestTask004TemplateRenderer(unittest.TestCase):
             self.assertEqual(ctx.exception.code, 1)
 
 
-class TestTask005MakefileTargets(unittest.TestCase):
+class TestMakefileTargets(unittest.TestCase):
     def test_help_lists_expected_targets(self):
         result = subprocess.run(
             ["make", "help"],
@@ -200,7 +200,7 @@ class TestTask005MakefileTargets(unittest.TestCase):
             self.assertIn("scripts/vm.sh not found", combined)
 
 
-class TestTask006VMScript(unittest.TestCase):
+class TestVMScript(unittest.TestCase):
     VM_SCRIPT = REPO_ROOT / "scripts" / "vm.sh"
 
     def test_vm_script_exists(self):
