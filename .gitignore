@@ -1,6 +1,9 @@
 # Auto-generated configs — never edit directly; regenerate with make generate-configs
 system/generated/
 
+# Pi emulator dist directory — persistent disk image, created by make vm-start
+pi/dist/
+
 # Python
 __pycache__/
 *.py[cod]
