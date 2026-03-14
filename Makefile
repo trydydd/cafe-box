@@ -5,10 +5,12 @@
 #   scripts/config.py + scripts/generate-configs.py — for generate-configs
 #   install.sh      — for the install target
 
-# Default disk path — overridable via environment or make variable: VM_DISK=path/to/disk.qcow2
-VM_DISK ?= vm/cafebox-dev.qcow2
-# Default cloud-init seed path — created alongside the disk by vm-build
-VM_SEED ?= vm/cafebox-seed.img
+# Docker image used for the Pi emulator (ptrsr/pi-ci)
+PI_CI_IMAGE ?= ptrsr/pi-ci
+# Directory for persistent Pi emulator disk image (bind-mounted to /dist)
+PI_DIST_DIR ?= pi/dist
+# SSH port forwarded from the Pi emulator to the host
+VM_SSH_PORT ?= 2222
 
 .PHONY: help vm-build vm-start vm-stop vm-ssh vm-status vm-delete install logs generate-configs test
 
@@ -16,25 +18,24 @@ VM_SEED ?= vm/cafebox-seed.img
 help:
 	@echo "CafeBox developer shortcuts"
 	@echo ""
-	@echo "  make vm-build         Download Debian 12 (Bookworm) ARM64 cloud image and create vm/cafebox-dev.qcow2"
-	@echo "  make vm-start         Start the development VM (builds disk first if missing)"
-	@echo "  make vm-stop          Stop the development VM"
-	@echo "  make vm-ssh           Open an SSH session into the development VM"
-	@echo "  make vm-status        Show VM process state, disk info, and SSH reachability"
-	@echo "  make vm-delete        Stop the VM (if running) and delete the disk image"
-	@echo "  make install          Run install.sh inside the VM (or locally)"
+	@echo "  make vm-build         Pull the ptrsr/pi-ci Docker image (Pi 3/4/5 + RPi OS Bookworm)"
+	@echo "  make vm-start         Start the Pi emulator container (pulls image if missing)"
+	@echo "  make vm-stop          Stop the Pi emulator container"
+	@echo "  make vm-ssh           Open an SSH session into the Pi emulator"
+	@echo "  make vm-status        Show Pi container state, dist dir, and SSH reachability"
+	@echo "  make vm-delete        Stop the container (if running) and delete the dist directory"
+	@echo "  make install          Run install.sh inside the Pi (or locally)"
 	@echo "  make logs             Tail journald logs for all cafebox services"
 	@echo "  make generate-configs Render all Jinja2 templates from cafe.yaml"
 	@echo "  make test             Run the test suite (tests/)"
 
 vm-build:
-	@test -f scripts/build-vm-disk.sh || { echo "ERROR: scripts/build-vm-disk.sh not found."; exit 1; }
-	VM_DISK="$(VM_DISK)" VM_SEED="$(VM_SEED)" bash scripts/build-vm-disk.sh
+	@command -v docker >/dev/null 2>&1 || { echo "ERROR: Docker not found. Install from https://docs.docker.com/get-docker/"; exit 1; }
+	docker pull $(PI_CI_IMAGE)
 
 vm-start:
 	@test -f scripts/vm.sh || { echo "ERROR: scripts/vm.sh not found."; exit 1; }
-	@test -f "$(VM_DISK)" || $(MAKE) vm-build VM_DISK="$(VM_DISK)" VM_SEED="$(VM_SEED)"
-	VM_DISK="$(VM_DISK)" VM_SEED="$(VM_SEED)" bash scripts/vm.sh start
+	PI_DIST_DIR="$(PI_DIST_DIR)" VM_SSH_PORT="$(VM_SSH_PORT)" PI_CI_IMAGE="$(PI_CI_IMAGE)" bash scripts/vm.sh start
 
 vm-stop:
 	@test -f scripts/vm.sh || { echo "ERROR: scripts/vm.sh not found."; exit 1; }
@@ -42,11 +43,11 @@ vm-stop:
 
 vm-status:
 	@test -f scripts/vm.sh || { echo "ERROR: scripts/vm.sh not found."; exit 1; }
-	VM_DISK="$(VM_DISK)" VM_SSH_PORT="$(VM_SSH_PORT)" bash scripts/vm.sh status
+	PI_DIST_DIR="$(PI_DIST_DIR)" VM_SSH_PORT="$(VM_SSH_PORT)" bash scripts/vm.sh status
 
 vm-delete:
 	@test -f scripts/vm.sh || { echo "ERROR: scripts/vm.sh not found."; exit 1; }
-	VM_DISK="$(VM_DISK)" VM_SEED="$(VM_SEED)" bash scripts/vm.sh delete
+	PI_DIST_DIR="$(PI_DIST_DIR)" bash scripts/vm.sh delete
 
 vm-ssh:
 	@test -f scripts/vm.sh || { echo "ERROR: scripts/vm.sh not found."; exit 1; }

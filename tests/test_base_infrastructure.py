@@ -229,9 +229,10 @@ class TestVMScript(unittest.TestCase):
         self.assertEqual(result.returncode, 0, msg=result.stderr)
         self.assertIn("stopped", result.stdout)
 
-    def test_status_shows_disk_info_when_stopped(self):
-        """status should report the disk path regardless of whether the VM is running."""
-        env = {**os.environ, "VM_DISK": "/tmp/nonexistent-cafebox.qcow2"}
+    def test_status_shows_dist_dir_when_stopped(self):
+        """status should report the PI_DIST_DIR path regardless of whether
+        the Pi container is running."""
+        env = {**os.environ, "PI_DIST_DIR": "/tmp/nonexistent-cafebox-pi"}
         result = subprocess.run(
             ["bash", str(self.VM_SCRIPT), "status"],
             capture_output=True,
@@ -240,9 +241,9 @@ class TestVMScript(unittest.TestCase):
             check=False,
         )
         self.assertEqual(result.returncode, 0, msg=result.stderr)
-        # The disk path must appear in the output so the user knows where to look.
-        self.assertIn("/tmp/nonexistent-cafebox.qcow2", result.stdout)
-        # When the disk is absent the output must say so.
+        # The dist dir path must appear in the output.
+        self.assertIn("/tmp/nonexistent-cafebox-pi", result.stdout)
+        # When the dist dir is absent the output must say so.
         self.assertIn("not found", result.stdout)
 
     def test_status_shows_ssh_port_not_checked_when_stopped(self):
@@ -268,17 +269,21 @@ class TestVMScript(unittest.TestCase):
         )
         self.assertNotEqual(result.returncode, 0)
 
-    def test_vm_disk_and_ssh_port_configurable_via_env(self):
-        """start sub-command should honour VM_DISK / VM_SSH_PORT env vars."""
-        # Stub qemu-system-aarch64 so the prerequisite check passes and the
-        # script reaches the disk-existence check (which is what we're testing).
-        with tempfile.TemporaryDirectory() as stub_bin:
-            stub = Path(stub_bin) / "qemu-system-aarch64"
+    def test_pi_ssh_port_and_dist_dir_configurable_via_env(self):
+        """start sub-command should honour PI_DIST_DIR / VM_SSH_PORT env vars."""
+        # Stub docker so the prerequisite check passes but docker run fails,
+        # proving the script reaches the start echo (which prints PI_DIST_DIR).
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            stub_bin = Path(tmp_dir) / "bin"
+            stub_bin.mkdir()
+            custom_dist = Path(tmp_dir) / "custom-pi-dist"
+
+            stub = stub_bin / "docker"
             stub.write_text("#!/bin/sh\nexit 1\n")
             stub.chmod(0o755)
 
             env_vars = {
-                "VM_DISK": "/nonexistent/custom.qcow2",
+                "PI_DIST_DIR": str(custom_dist),
                 "VM_SSH_PORT": "9999",
                 "PATH": f"{stub_bin}:{os.environ.get('PATH', '')}",
             }
@@ -290,18 +295,18 @@ class TestVMScript(unittest.TestCase):
                 env=env,
                 check=False,
             )
-        # Should fail because the disk image doesn't exist, but the error
-        # message must mention the custom path, proving the env var was read.
+        # Should fail because docker run fails, but the echo before it must
+        # mention the custom PI_DIST_DIR, proving the env var was read.
         combined = f"{result.stdout}\n{result.stderr}"
-        self.assertIn("/nonexistent/custom.qcow2", combined)
+        self.assertIn(str(custom_dist), combined)
         self.assertNotEqual(result.returncode, 0)
 
-    def test_delete_removes_disk_image(self):
-        """delete sub-command should remove an existing disk image."""
+    def test_delete_removes_dist_directory(self):
+        """delete sub-command should remove an existing Pi dist directory."""
         with tempfile.TemporaryDirectory() as tmp:
-            disk = Path(tmp) / "cafebox-dev.qcow2"
-            disk.write_bytes(b"fake-qcow2-data")
-            env = {**os.environ, "VM_DISK": str(disk)}
+            dist = Path(tmp) / "pi" / "dist"
+            dist.mkdir(parents=True)
+            env = {**os.environ, "PI_DIST_DIR": str(dist)}
             result = subprocess.run(
                 ["bash", str(self.VM_SCRIPT), "delete"],
                 capture_output=True,
@@ -310,12 +315,12 @@ class TestVMScript(unittest.TestCase):
                 check=False,
             )
             self.assertEqual(result.returncode, 0, msg=result.stderr)
-            self.assertFalse(disk.exists(), "Disk image should have been deleted")
+            self.assertFalse(dist.exists(), "Dist directory should have been deleted")
             self.assertIn("Deleted", result.stdout)
 
-    def test_delete_when_no_disk_prints_info_and_exits_zero(self):
-        """delete sub-command should exit 0 with an INFO message when no disk exists."""
-        env = {**os.environ, "VM_DISK": "/nonexistent/no-disk.qcow2"}
+    def test_delete_when_no_dist_dir_prints_info_and_exits_zero(self):
+        """delete sub-command should exit 0 with an INFO message when no dist dir exists."""
+        env = {**os.environ, "PI_DIST_DIR": "/nonexistent/no-pi-dist"}
         result = subprocess.run(
             ["bash", str(self.VM_SCRIPT), "delete"],
             capture_output=True,
@@ -326,33 +331,32 @@ class TestVMScript(unittest.TestCase):
         self.assertEqual(result.returncode, 0, msg=result.stderr)
         self.assertIn("INFO", result.stdout)
 
-    def test_vm_start_uses_virt_machine(self):
-        """vm.sh start must default to -machine virt (generic QEMU virtual machine
-        for aarch64 that provides a full PCI bus and UEFI boot)."""
+    def test_pi_start_uses_pi_ci_docker_image(self):
+        """vm.sh start must use the ptrsr/pi-ci Docker image instead of QEMU."""
         content = self.VM_SCRIPT.read_text()
         self.assertIn(
-            "virt",
+            "ptrsr/pi-ci",
             content,
-            "vm.sh should default VM_MACHINE to virt",
+            "vm.sh should reference the ptrsr/pi-ci Docker image",
         )
         self.assertNotIn(
-            "raspi3b",
+            "qemu-system-aarch64",
             content,
-            "vm.sh must not use raspi3b: switch to the generic virt machine",
+            "vm.sh must not invoke QEMU directly: use the Docker image instead",
         )
 
-    def test_vm_start_uses_virtio_net(self):
-        """virt machine has a full PCI bus; network must use virtio-net-pci."""
+    def test_pi_start_uses_docker_run(self):
+        """vm.sh start must use 'docker run' to launch the Pi emulator."""
         content = self.VM_SCRIPT.read_text()
         self.assertIn(
-            "virtio-net-pci",
+            "docker run",
             content,
-            "vm.sh should use virtio-net-pci with the virt machine",
+            "vm.sh should use 'docker run' to start the Pi emulator",
         )
-        self.assertNotIn(
-            "usb-net",
+        self.assertIn(
+            "PI_CI_IMAGE",
             content,
-            "vm.sh must not use usb-net: that was only needed for raspi3b",
+            "vm.sh should use the PI_CI_IMAGE variable for the Docker image name",
         )
 
     def test_vm_ssh_waits_for_ssh_readiness(self):
@@ -369,30 +373,25 @@ class TestVMScript(unittest.TestCase):
             "vm.sh _wait_for_ssh should use ssh-keyscan to detect a live sshd",
         )
 
-    def test_vm_start_defines_log_file_variable(self):
-        """vm.sh must declare a VM_LOG_FILE variable with a default path."""
+    def test_pi_start_captures_docker_output_to_log(self):
+        """vm.sh must redirect docker startup output to VM_LOG_FILE so the
+        user can inspect it for troubleshooting."""
         content = self.VM_SCRIPT.read_text()
         self.assertIn(
             "VM_LOG_FILE",
             content,
             "vm.sh should define a VM_LOG_FILE variable",
         )
-
-    def test_vm_start_passes_serial_log_to_qemu(self):
-        """vm.sh must pass -serial file:<VM_LOG_FILE> to qemu so console
-        output is captured in the log file."""
-        content = self.VM_SCRIPT.read_text()
-        self.assertRegex(
+        self.assertIn(
+            '"$VM_LOG_FILE"',
             content,
-            r'-serial\s+"?file:.*VM_LOG_FILE',
-            "vm.sh should pass -serial file:${VM_LOG_FILE} to qemu-system-aarch64",
+            "vm.sh should redirect docker output to VM_LOG_FILE",
         )
 
-    def test_vm_start_prints_log_file_path(self):
+    def test_pi_start_prints_log_info(self):
         """cmd_start must print the log file path so the user knows where to
-        look for serial console output."""
+        look for startup output."""
         content = self.VM_SCRIPT.read_text()
-        # Confirm the log line references it in a user-visible echo statement.
         self.assertRegex(
             content,
             r'echo.*VM_LOG_FILE',
@@ -400,106 +399,57 @@ class TestVMScript(unittest.TestCase):
         )
 
 
-class TestBuildVMDiskScript(unittest.TestCase):
-    BUILD_SCRIPT = REPO_ROOT / "scripts" / "build-vm-disk.sh"
+class TestDockerSetup(unittest.TestCase):
+    """Validate that the pi-ci Docker-based architecture is correctly wired."""
 
-    def test_build_script_syntax(self):
-        result = subprocess.run(
-            ["bash", "-n", str(self.BUILD_SCRIPT)],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        self.assertEqual(result.returncode, 0, msg=result.stderr)
-
-    def test_build_script_requires_mtools(self):
-        content = self.BUILD_SCRIPT.read_text()
+    def test_vm_sh_uses_docker_not_qemu(self):
+        """vm.sh must use Docker/pi-ci, not QEMU directly."""
+        content = (REPO_ROOT / "scripts" / "vm.sh").read_text()
         self.assertIn(
-            "mcopy", content,
-            "build-vm-disk.sh should check for mcopy (mtools)",
+            "docker",
+            content,
+            "vm.sh should use Docker to manage the Pi emulator",
+        )
+        self.assertNotIn(
+            "qemu-system-aarch64",
+            content,
+            "vm.sh must not invoke qemu-system-aarch64 directly",
         )
 
-    def test_build_script_creates_cloud_init_seed(self):
-        """build-vm-disk.sh must create a cloud-init nocloud seed image so that
-        the Debian cloud image can configure the pi user on first boot."""
-        content = self.BUILD_SCRIPT.read_text()
-        # The seed image must be referenced via a variable.
-        self.assertIn(
-            "VM_SEED", content,
-            "build-vm-disk.sh should define a VM_SEED variable for the seed image path",
-        )
-        # The cloud-init seed needs a FAT filesystem labelled 'cidata'.
-        self.assertIn(
-            "cidata", content,
-            "build-vm-disk.sh should create a FAT image labelled 'cidata' for cloud-init",
-        )
-        # The seed must contain a user-data file (cloud-config).
-        self.assertIn(
-            "user-data", content,
-            "build-vm-disk.sh should write a user-data file into the seed image",
-        )
-        # The seed must contain a meta-data file.
-        self.assertIn(
-            "meta-data", content,
-            "build-vm-disk.sh should write a meta-data file into the seed image",
-        )
-
-    def test_build_script_configures_pi_user_via_cloud_init(self):
-        """build-vm-disk.sh must configure the pi user in cloud-init user-data
-        with a properly hashed password."""
-        content = self.BUILD_SCRIPT.read_text()
-        # The user-data must set up the 'pi' user.
-        self.assertIn(
-            "pi", content,
-            "build-vm-disk.sh should configure the 'pi' user in user-data",
-        )
-        # SSH password authentication must be enabled.
-        self.assertIn(
-            "ssh_pwauth", content,
-            "build-vm-disk.sh should enable ssh_pwauth in user-data",
-        )
-        # The password must be hashed via openssl, not stored in plain text.
-        self.assertIn(
-            "openssl passwd", content,
-            "build-vm-disk.sh should use openssl passwd to hash the password",
-        )
-
-    def test_build_script_caches_image(self):
-        content = self.BUILD_SCRIPT.read_text()
-        # The script must declare a DEBIAN_CACHE variable.
-        self.assertIn(
-            "DEBIAN_CACHE", content,
-            "build-vm-disk.sh should declare a DEBIAN_CACHE variable",
-        )
-        # The script must skip the download when a cached image is present.
-        self.assertIn(
-            '-f "$CACHED_IMAGE"', content,
-            "build-vm-disk.sh should test for the cached image file before downloading",
-        )
-        # The script must save the downloaded image to the cache.
-        self.assertIn(
-            "CACHED_IMAGE", content,
-            "build-vm-disk.sh should save the downloaded image to the cache",
-        )
-
-    def test_debian_cache_dir_is_gitignored(self):
+    def test_pi_dist_dir_is_gitignored(self):
+        """pi/dist/ must be in .gitignore (contains large qcow2 images)."""
         gitignore = (REPO_ROOT / ".gitignore").read_text()
         self.assertIn(
-            "vm/debian-cache", gitignore,
-            ".gitignore should exclude the Debian cloud image cache directory",
+            "pi/dist",
+            gitignore,
+            ".gitignore should exclude the Pi emulator dist directory",
         )
 
-    def test_build_script_resizes_image_to_16g(self):
-        content = self.BUILD_SCRIPT.read_text()
+    def test_vm_build_uses_docker_pull(self):
+        """make vm-build must pull the pi-ci Docker image."""
+        makefile = (REPO_ROOT / "Makefile").read_text()
         self.assertIn(
-            "qemu-img resize",
-            content,
-            "build-vm-disk.sh should resize the qcow2 image with qemu-img resize",
+            "docker pull",
+            makefile,
+            "Makefile vm-build target should pull the pi-ci Docker image",
         )
+
+    def test_makefile_references_pi_ci_image(self):
+        """Makefile must reference ptrsr/pi-ci as the Docker image."""
+        makefile = (REPO_ROOT / "Makefile").read_text()
         self.assertIn(
-            "16G",
-            content,
-            "build-vm-disk.sh should resize the image to 16G (power-of-2 required by QEMU SD card emulation)",
+            "ptrsr/pi-ci",
+            makefile,
+            "Makefile should reference ptrsr/pi-ci as the Pi emulator image",
+        )
+
+    def test_makefile_has_pi_dist_dir_variable(self):
+        """Makefile must define PI_DIST_DIR for the persistent disk directory."""
+        makefile = (REPO_ROOT / "Makefile").read_text()
+        self.assertIn(
+            "PI_DIST_DIR",
+            makefile,
+            "Makefile should define PI_DIST_DIR for the Pi emulator dist directory",
         )
 
 
