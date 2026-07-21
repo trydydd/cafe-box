@@ -40,3 +40,11 @@ usb_ssh:
   username: "cafe"
   password: "cafe"
   ip: "192.168.7.2"
+  # Fixed MAC addresses for the g_ether gadget. Pinning these prevents the
+  # interface from getting a random MAC (and a different name) on every boot.
+  # host_addr: MAC the host-side interface will use (determines interface name)
+  # dev_addr:  MAC assigned to the Pi's usb0 interface
+  # Must be valid unicast MACs (first byte even). Change these per-device in
+  # hearth.yaml if running multiple Hearth boxes on the same network.
+  host_mac: "12:34:56:78:9a:bc"
+  dev_mac:  "12:34:56:78:9a:bd"

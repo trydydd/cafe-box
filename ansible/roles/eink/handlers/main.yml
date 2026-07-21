@@ -1,0 +1,7 @@
+---
+# roles/eink/handlers/main.yml
+
+- name: Reload systemd daemon
+  ansible.builtin.systemd:
+    daemon_reload: true
+  when: _systemd_active.stat.exists

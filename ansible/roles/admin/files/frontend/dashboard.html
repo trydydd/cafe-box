@@ -20,6 +20,25 @@
       <h2 id="services-heading">Services</h2>
       <div class="tile-grid" id="tile-grid" aria-live="polite" aria-label="Services"></div>
     </section>
+
+    <section class="services-section" id="eink-section" aria-labelledby="eink-heading" style="display:none;">
+      <h2 id="eink-heading">E-ink Display</h2>
+      <div class="tile-grid">
+        <article class="tile tile--static tile--enabled" id="eink-tile">
+          <p class="tile-name">Display</p>
+          <div class="tile-badges">
+            <span class="badge badge--enabled">Enabled</span>
+            <span class="badge" id="eink-mode-badge">—</span>
+          </div>
+          <div class="tile-actions" id="eink-actions">
+            <button type="button" class="btn-action btn-start" id="eink-logo-btn"
+                    aria-label="Show logo on e-ink display">Show Logo</button>
+            <button type="button" class="btn-action btn-stop" id="eink-blank-btn"
+                    aria-label="Blank the e-ink display">Blank</button>
+          </div>
+        </article>
+      </div>
+    </section>
   </div>
 
   <div class="notification" id="notification" role="status" aria-live="polite"></div>
@@ -153,6 +172,68 @@
             document.getElementById("retry-btn").addEventListener("click", fetchAndRender);
           });
       }
+
+      // -----------------------------------------------------------------------
+      // E-ink display panel
+      // -----------------------------------------------------------------------
+      var einkSection  = document.getElementById("eink-section");
+      var einkModeBadge = document.getElementById("eink-mode-badge");
+      var einkLogoBtn  = document.getElementById("eink-logo-btn");
+      var einkBlankBtn = document.getElementById("eink-blank-btn");
+      var einkBtns     = [einkLogoBtn, einkBlankBtn];
+
+      function einkModeLabel(mode) {
+        return mode === "logo" ? "Showing Logo" : mode === "blank" ? "Blank" : "Off";
+      }
+
+      function einkModeBadgeClass(mode) {
+        return mode === "logo" ? "badge--running" : mode === "blank" ? "badge--stopped" : "badge--disabled";
+      }
+
+      function updateEinkBadge(mode) {
+        einkModeBadge.textContent = einkModeLabel(mode);
+        einkModeBadge.className = "badge " + einkModeBadgeClass(mode);
+      }
+
+      function fetchEinkStatus() {
+        fetch("/api/admin/eink/status", { credentials: "same-origin" })
+          .then(function (res) {
+            if (!res.ok) return;
+            return res.json();
+          })
+          .then(function (data) {
+            if (!data) return;
+            if (data.enabled) {
+              einkSection.style.display = "";
+              updateEinkBadge(data.mode);
+            }
+          });
+      }
+
+      function runEinkAction(mode) {
+        einkBtns.forEach(function (b) { b.disabled = true; });
+        fetch("/api/admin/eink/" + mode, {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "X-CSRF-Token": getCsrfToken() }
+        })
+          .then(function (res) {
+            if (res.ok) {
+              return res.json().then(function (d) { updateEinkBadge(d.mode); });
+            } else {
+              return res.json().then(function (d) {
+                showNotice("Error: " + (d.detail || mode + " failed"));
+              });
+            }
+          })
+          .catch(function () { showNotice("Network error — could not update display"); })
+          .finally(function () { einkBtns.forEach(function (b) { b.disabled = false; }); });
+      }
+
+      einkLogoBtn.addEventListener("click", function () { runEinkAction("logo"); });
+      einkBlankBtn.addEventListener("click", function () { runEinkAction("blank"); });
+
+      fetchEinkStatus();
 
       logoutBtn.addEventListener("click", function () {
         logoutBtn.disabled = true;

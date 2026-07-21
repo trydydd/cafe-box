@@ -1,0 +1,164 @@
+---
+# roles/eink/tasks/main.yml
+# Provision a Pimoroni Inky pHAT (black/white) e-ink display.
+#
+# Phases:
+#   1. System packages  — apt deps required by the inky Python library
+#   2. Python venv      — isolated virtualenv with inky[rpi] + pillow
+#   3. Deploy           — render script + service unit from templates; enable SPI
+#   4. Service          — enable hearth-eink.service (chroot-safe symlink pattern)
+
+# ---------------------------------------------------------------------------
+# Phase 1 — System packages
+# ---------------------------------------------------------------------------
+- name: "eink — Phase 1: Install system packages"
+  block:
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Install e-ink system dependencies
+      ansible.builtin.apt:
+        name:
+          - python3-pip
+          - python3-venv
+          - fonts-dejavu-core
+          - python3-libgpiod
+          - libcairo2
+        state: present
+
+  rescue:
+    - name: "eink Phase 1 FAILED — package installation error"
+      ansible.builtin.fail:
+        msg: >-
+          eink role phase 1 (package installation) failed.
+          Check the apt output above for details.
+
+# ---------------------------------------------------------------------------
+# Phase 2 — Python virtualenv + libraries
+# ---------------------------------------------------------------------------
+- name: "eink — Phase 2: Create virtualenv and install Python libraries"
+  block:
+    - name: Create eink directory
+      ansible.builtin.file:
+        path: "{{ eink_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Deploy eink Python requirements
+      ansible.builtin.copy:
+        src: requirements.txt
+        dest: "{{ eink_dir }}/requirements.txt"
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Deploy fireplace SVG icon
+      ansible.builtin.copy:
+        src: fireplace.svg
+        dest: "{{ eink_icon }}"
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Create Python virtualenv for eink
+      ansible.builtin.command:
+        cmd: python3 -m venv {{ eink_venv }}
+        creates: "{{ eink_venv }}/pyvenv.cfg"
+
+    - name: Install eink Python dependencies
+      ansible.builtin.pip:
+        requirements: "{{ eink_dir }}/requirements.txt"
+        virtualenv: "{{ eink_venv }}"
+
+  rescue:
+    - name: "eink Phase 2 FAILED — pip/virtualenv error"
+      ansible.builtin.fail:
+        msg: >-
+          eink role phase 2 (Python virtualenv setup) failed.
+          Check the pip output above for details.
+
+# ---------------------------------------------------------------------------
+# Phase 3 — SPI, script, and service deployment
+# ---------------------------------------------------------------------------
+- name: "eink — Phase 3: Enable SPI and deploy display script + service"
+  block:
+    - name: Enable SPI interface in boot config
+      # dtparam=spi=on is required for the Inky pHAT to communicate over SPI.
+      # This is written during image build; takes effect on first real boot.
+      # /boot/firmware/config.txt is the path on Raspberry Pi OS Bookworm (64-bit).
+      ansible.builtin.lineinfile:
+        path: /boot/firmware/config.txt
+        line: "dtparam=spi=on"
+        regexp: "^#?dtparam=spi="
+        state: present
+        create: false
+      # Only present on real Pi hardware / image build — skip silently in dev VMs
+      failed_when: false
+
+    - name: Deploy hearth-eink renderer script
+      ansible.builtin.template:
+        src: hearth-eink.py.j2
+        dest: "{{ eink_script }}"
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Deploy hearth-eink systemd service unit
+      ansible.builtin.template:
+        src: hearth-eink.service.j2
+        dest: /etc/systemd/system/{{ eink_service_name }}.service
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Reload systemd daemon
+
+    - name: Deploy hearth-eink-blank systemd service unit
+      ansible.builtin.template:
+        src: hearth-eink-blank.service.j2
+        dest: /etc/systemd/system/hearth-eink-blank.service
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Reload systemd daemon
+
+  rescue:
+    - name: "eink Phase 3 FAILED — deployment error"
+      ansible.builtin.fail:
+        msg: >-
+          eink role phase 3 (SPI / script / service deployment) failed.
+          Check the task output above for details.
+
+# ---------------------------------------------------------------------------
+# Phase 4 — Service enablement (chroot-safe)
+# ---------------------------------------------------------------------------
+- name: "eink — Phase 4: Enable hearth-eink service"
+  block:
+    - name: Detect whether systemd is active (not a chroot / image build)
+      # /run/systemd/private only exists when systemd is running as PID 1.
+      ansible.builtin.stat:
+        path: /run/systemd/private
+      register: _systemd_active
+
+    - name: Enable hearth-eink service (symlink — works in chroot and on live system)
+      ansible.builtin.file:
+        src: /etc/systemd/system/{{ eink_service_name }}.service
+        dest: /etc/systemd/system/multi-user.target.wants/{{ eink_service_name }}.service
+        state: link
+
+    - name: Reload systemd and start service (live system only — skipped during image build)
+      ansible.builtin.systemd:
+        name: "{{ eink_service_name }}.service"
+        daemon_reload: true
+        state: started
+      when: _systemd_active.stat.exists
+
+  rescue:
+    - name: "eink Phase 4 FAILED — service enablement error"
+      ansible.builtin.fail:
+        msg: >-
+          eink role phase 4 (service enablement) failed.
+          Check the task output above for details.

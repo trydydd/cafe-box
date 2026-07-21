@@ -1,0 +1,6 @@
+---
+galaxy_info:
+  role_name: eink
+  description: Pimoroni Inky pHAT (black/white) e-ink display — shows Hearth logo and URL on boot
+  min_ansible_version: "2.12"
+dependencies: []

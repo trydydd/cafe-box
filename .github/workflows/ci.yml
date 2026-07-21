@@ -33,7 +33,7 @@ jobs:
 
       - name: Install Python test dependencies
         run: |
-          pip install pytest pyyaml jinja2 aiofiles mutagen
+          pip install pytest pyyaml jinja2 aiofiles mutagen pillow
           pip install -r ansible/roles/admin/files/backend/requirements.txt
 
       - name: Validate build script syntax

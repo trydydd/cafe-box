@@ -100,10 +100,10 @@ storage:
 # ---------------------------------------------------------------------------
 usb_ssh:
   # Set to false to skip all USB gadget and SSH user provisioning
-  enabled: false
+  enabled: true
 
   # OS user created for USB SSH access
-  username: "hestia"
+  username: "root"
 
   # Default password — change before deploying to a shared or public environment.
   # Anyone on the same USB network segment can attempt to log in with these
@@ -112,6 +112,12 @@ usb_ssh:
 
   # Static IP assigned to the usb0 gadget interface
   ip: "192.168.7.2"
+
+  # Fixed MAC addresses for the g_ether USB gadget.
+  # Pinning these prevents a random MAC (and a different enx* interface name)
+  # on every boot. Change per-device if running multiple Hearth boxes.
+  host_mac: "12:34:56:78:9a:bc"
+  dev_mac:  "12:34:56:78:9a:bd"
 
 # ---------------------------------------------------------------------------
 # Captive portal
@@ -169,6 +175,22 @@ services:
   # Supported formats: MP3 (.mp3), OGG (.ogg), FLAC (.flac), AAC/M4A (.aac, .m4a)
   music:
     enabled: true
+
+# ---------------------------------------------------------------------------
+# E-ink display (Pimoroni Inky pHAT — black/white)
+#
+# When enabled, the display shows the box name and local URL on every boot.
+# Requires a Pimoroni Inky pHAT connected to the Pi's GPIO header.
+# SPI is enabled automatically in /boot/firmware/config.txt.
+# ---------------------------------------------------------------------------
+eink:
+  enabled: true
+  # Inky display type — passed as --type to hearth-eink.py.
+  # Options: phat, phatssd1608, what, whatssd1683, impressions, 7colour
+  display_type: "phat"
+  # Inky display colour — passed as --colour to hearth-eink.py.
+  # Options: black, red, yellow, red/yellow
+  display_colour: "black"
 
 # ---------------------------------------------------------------------------
 # Diagnostics

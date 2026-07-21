@@ -27,6 +27,12 @@ Cmnd_Alias HEARTH_CMDS = \
     /bin/systemctl restart kiwix.service, \
     /bin/systemctl start hearth-jukebox.service, \
     /bin/systemctl stop hearth-jukebox.service, \
-    /bin/systemctl restart hearth-jukebox.service
+    /bin/systemctl restart hearth-jukebox.service, \
+    /bin/systemctl start hearth-eink.service, \
+    /bin/systemctl stop hearth-eink.service, \
+    /bin/systemctl restart hearth-eink.service, \
+    /bin/systemctl start hearth-eink-blank.service, \
+    /bin/systemctl stop hearth-eink-blank.service, \
+    /bin/systemctl restart hearth-eink-blank.service
 
 hestia ALL=(root) NOPASSWD: HEARTH_CMDS

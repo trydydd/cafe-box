@@ -14,12 +14,16 @@ The application is a FastAPI service that exposes:
   POST /api/admin/services/{id}/stop          → stop service
   POST /api/admin/services/{id}/restart       → restart service
   POST /api/admin/upload/{service_id}         → upload content file
+  GET  /api/admin/eink/status                 → e-ink display mode
+  POST /api/admin/eink/logo                   → show logo on display
+  POST /api/admin/eink/blank                  → clear display to white
 """
 
 from fastapi import Depends, FastAPI
 
 from csrf import verify_csrf_token
 from routers import auth as auth_router
+from routers import eink as eink_router
 from routers import public as public_router
 from routers import services as services_router
 from routers import upload as upload_router
@@ -30,6 +34,7 @@ app.include_router(public_router.router)
 app.include_router(auth_router.router)
 app.include_router(services_router.router)
 app.include_router(upload_router.router)
+app.include_router(eink_router.router)
 
 
 @app.get("/healthz", dependencies=[Depends(verify_csrf_token)])

@@ -1,0 +1,25 @@
+---
+# roles/eink/defaults/main.yml
+
+# Inky display type — passed as --type to hearth-eink.py
+# Options: phat, phatssd1608, what, whatssd1683, impressions, 7colour
+eink_display_type: "phat"
+
+# Inky display colour — passed as --colour to hearth-eink.py
+# Options: black, red, yellow, red/yellow
+eink_display_colour: "black"
+
+# Absolute path where the display renderer script is installed
+eink_script: /usr/local/bin/hearth-eink.py
+
+# Directory for eink server files (requirements.txt, SVG icon, etc.)
+eink_dir: /opt/hearth/eink
+
+# Path to the fireplace SVG icon used by the renderer
+eink_icon: /opt/hearth/eink/fireplace.svg
+
+# Python virtualenv that owns the inky + pillow dependencies
+eink_venv: /usr/local/lib/hearth-eink
+
+# systemd service name (unit file: /etc/systemd/system/<name>.service)
+eink_service_name: hearth-eink

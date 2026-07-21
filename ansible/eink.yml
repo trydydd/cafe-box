@@ -1,0 +1,22 @@
+---
+# eink.yml — Standalone playbook for the Pimoroni Inky pHAT e-ink display role
+#
+# Run against a live Pi:
+#   ansible-playbook -i inventory/production eink.yml
+#
+# Run against the dev VM:
+#   ansible-playbook -i inventory/development eink.yml
+#
+# Dry-run (check mode):
+#   ansible-playbook -i inventory/development eink.yml --check
+
+- name: Provision Hearth e-ink display
+  hosts: all
+  become: true
+
+  vars_files:
+    - ../hearth.yaml
+
+  roles:
+    - role: eink
+      tags: [eink]

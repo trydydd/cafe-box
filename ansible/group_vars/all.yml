@@ -71,6 +71,8 @@ usb_ssh:
   username: "cafe"
   password: "cafe"
   ip: "192.168.7.2"
+  host_mac: "12:34:56:78:9a:bc"
+  dev_mac:  "12:34:56:78:9a:bd"
 
 # ---------------------------------------------------------------------------
 # Diagnostics (mirrors hearth.yaml: diagnostics.*)

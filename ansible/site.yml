@@ -40,3 +40,5 @@
       tags: [admin]
     - role: diagnostics
       tags: [diagnostics]
+    - role: eink
+      tags: [eink]

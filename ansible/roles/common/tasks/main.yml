@@ -329,6 +329,17 @@
             mode: "0644"
           when: "'modules-load=dwc2,g_ether' not in (_cmdline_raw.content | b64decode)"
 
+        - name: Pin g_ether MAC addresses to prevent random rename on every boot
+          # Without fixed MACs, g_ether generates a random host_addr each boot,
+          # causing the host interface to get a different enx* name every time.
+          ansible.builtin.copy:
+            content: |
+              options g_ether host_addr={{ usb_ssh.host_mac }} dev_addr={{ usb_ssh.dev_mac }}
+            dest: /etc/modprobe.d/g_ether.conf
+            owner: root
+            group: root
+            mode: "0644"
+
         - name: Create ssh enable file in boot partition
           # RPi OS reads this file at first boot and enables the SSH daemon.
           ansible.builtin.file:
@@ -405,6 +416,26 @@
         group: root
         mode: "0600"
       when: _nm_dir_common.stat.exists
+
+    # ---- Root SSH access over USB ------------------------------------------
+    - name: Set root password for USB SSH access
+      ansible.builtin.user:
+        name: root
+        password: "{{ usb_ssh.password | password_hash('sha512') }}"
+        update_password: on_create
+      no_log: true
+
+    - name: Allow root login and password auth in sshd_config
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "{{ item.regexp }}"
+        line: "{{ item.line }}"
+        state: present
+      loop:
+        - regexp: "^#?PermitRootLogin"
+          line: "PermitRootLogin yes"
+        - regexp: "^#?PasswordAuthentication"
+          line: "PasswordAuthentication yes"
 
     # ---- Ensure the SSH service is enabled ---------------------------------
     - name: Enable SSH service

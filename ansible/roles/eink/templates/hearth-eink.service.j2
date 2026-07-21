@@ -1,0 +1,14 @@
+[Unit]
+Description=Hearth e-ink display — renders logo and URL on Pimoroni Inky pHAT
+After=multi-user.target
+Wants=multi-user.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart={{ eink_venv }}/bin/python3 {{ eink_script }}
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
